@@ -1,0 +1,78 @@
+name: Backup
+on:
+  schedule:
+    - cron: "4 23 * * 0"
+  push:
+    branches:
+      - main
+      
+jobs:
+  build:
+    name: Backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backup
+        run: |
+          rm -rf *
+
+          items=(
+              xtls
+              trojan-go
+              relaybaton
+              pingtunnel
+              naive
+              hysteria
+              brook
+              wireguard
+              tuic
+              mieru
+          )
+
+          for item in "${items[@]}"; do
+              echo $item
+              plugin_version=$(curl -sL https://data.jsdelivr.com/v1/package/gh/sagernet/sagernet | jq -r '.versions[] | select(.|test("'$item'"))' | head -1)
+
+              if [ $item == "xtls" ]; then
+                  wget -q https://github.com/SagerNet/SagerNet/releases/download/$plugin_version/$plugin_version-arm64-v8a-release.apk &>/dev/null
+              else
+                  wget -q https://github.com/SagerNet/SagerNet/releases/download/$plugin_version/$plugin_version-arm64-v8a.apk &>/dev/null
+              fi
+              echo $plugin_version
+              echo =======================
+          done
+
+          sn_version=$(curl -sL https://data.jsdelivr.com/v1/package/gh/sagernet/sagernet | jq -r .versions[0])
+          wget -q https://github.com/SagerNet/SagerNet/releases/download/$sn_version/SN-$sn_version-arm64-v8a.apk &>/dev/null
+          echo SagerNet
+          echo $sn_version
+          echo ====================
+
+          #ax_version=$(curl -sL https://data.jsdelivr.com/v1/package/gh/xtls/anxray | jq -r .versions[0])
+          #wget -q https://github.com/xtls/anxray/releases/download/$ax_version/ax-$ax_version-arm64-v8a.apk &>/dev/null
+          wget -q https://github.com/mainians/SagerNet/raw/main/ax-0.4-rc06-arm64-v8a.apk &>/dev/null
+          #echo Anxray
+          #echo $ax_version
+          echo =========================
+
+          v2ray_plugin_version=$(curl -sL https://data.jsdelivr.com/v1/package/gh/SagerNet/v2ray-plugin-android | jq -r .versions[1])
+          wget -q https://github.com/SagerNet/v2ray-plugin-android/releases/download/v$v2ray_plugin_version/v2ray-plugin-$v2ray_plugin_version-arm64-v8a.apk &>/dev/null
+          echo v2ray_plugin_version
+          echo $v2ray_plugin_version
+          echo =========================
+
+          #echo -e "|    Size   |     jsDelivr  | FastGit | sha256sum | \n|  ---  |  ---  |  ---  | --- |" > README.md
+          #for file in $(ls *.apk); do
+          #echo "| $(expr $(wc -c < $file )  / 1000000  | numfmt --to=iec-i --suffix=MB --format="%f") | [$file](https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/$file) | [$file](https://raw.fastgit.org/${{ github.repository }}/main/$file) | $(sha256sum  $file | cut -d " " -f1 ) |" >> README.md
+          #done
+
+          mkdir -p .github/workflows
+          wget -qO .github/workflows/Backup.yml https://github.com/${{ github.repository }}/raw/main/.github/workflows/Backup.yml
+
+          git config --global init.defaultBranch main
+          git init
+          git add .
+          git config user.name "mainians"
+          git config user.email "61817665+mainians@users.noreply.github.com"
+          git commit -m "$(date +"%Y-%m-%d")"
+          git remote add release "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -u release main -f
